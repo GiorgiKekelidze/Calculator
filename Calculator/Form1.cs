@@ -1,14 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
 using System.Globalization;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using System.Text.RegularExpressions;
+using System.Windows.Forms;
 
 namespace Calculator
 {
@@ -71,7 +67,7 @@ namespace Calculator
         private void ThreeBtn_Click(object sender, EventArgs e)
         {
             AppendToEnd("3");
-        }
+        } 
         private void FourBtn_Click(object sender, EventArgs e)
         {
             AppendToEnd("4");
@@ -283,61 +279,27 @@ namespace Calculator
         private void PointBtn_Click(object sender, EventArgs e)
         {
             string[] parts = richTextBox1.Text.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length > 1)
-            {
-                if ((double.TryParse(richTextBox1.Text.Last().ToString(), out i) == true) && (parts[0].Contains(',') || (parts[1].Contains(',')))){
 
-                }
-            }
-            else if (parts.Length <= 1) {
-                if ((double.TryParse(richTextBox1.Text.Last().ToString(), out i) == true) && (parts[0].Contains(',')))
+            if (parts.Length > 0 && double.TryParse(parts.Last(), NumberStyles.Any, CultureInfo.InvariantCulture, out _))
+            {
+                if (!parts.Last().Contains(','))
                 {
-                    // If the last character is a digit and the first or second part contains a decimal point, do nothing
+                    AppendToEndOper(",");
                 }
-            }
-            if (double.TryParse(richTextBox1.Text.Last().ToString(), out i) == true && richTextBox1.Text.Last() != ',')
-            {
-                // If the last character is a digit, append a decimal point
-                AppendToEndOper(",");
-                // Your logic here
-            }
-            else if (richTextBox1.Text.Last() == ',')
-            {
-                // If the last character is already a decimal point, do nothing
             }
         }
 
         private void ModulusBtn_Click(object sender, EventArgs e)
         {
-            string input = richTextBox1.Text.Trim();
+            string[] parts = richTextBox1.Text.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
-            if (string.IsNullOrEmpty(input))
-                return;
+            if (parts.Length > 0 && double.TryParse(parts.Last(), out double number))
+            {
+                number = -number;  // Toggle sign
+                parts[parts.Length - 1] = number.ToString();  // Update last number
+                richTextBox1.Text = string.Join(" ", parts); // Rebuild text display
+            }
 
-            // Find the last number in the expression
-            int lastOpIndex = Math.Max(
-                input.LastIndexOf('+'),
-                Math.Max(
-                    input.LastIndexOf('-'),
-                    Math.Max(
-                        input.LastIndexOf('*'),
-                        Math.Max(input.LastIndexOf('/', input.Length - 1), input.LastIndexOf('%'))
-                    )
-                )
-            );
-
-            // Get prefix and last number
-            string prefix = input.Substring(0, lastOpIndex + 1);
-            string lastNum = input.Substring(lastOpIndex + 1).Trim();
-
-            // Toggle negation
-            if (lastNum.StartsWith("-"))
-                lastNum = lastNum.Substring(1); // remove -
-            else
-                lastNum = "-" + lastNum;
-
-            // Update the text box
-            richTextBox1.Text = prefix + lastNum;
         }
 
         private void SqrtBtn_Click(object sender, EventArgs e)
@@ -350,8 +312,21 @@ namespace Calculator
                 richTextBox1.Text = "sqrt(0)";
                 return;
             }
-
-            if (input.StartsWith("sqrt(") && input.EndsWith(")"))
+            else if (richTextBox1.Text.Contains(" ") && richTextBox1.Text.Last() != ' ')
+            {
+                    string[] parts = richTextBox1.Text.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                    double rightOperand = double.Parse(parts[2], new CultureInfo("fr-FR"));
+                    parts[2] = Math.Sqrt(rightOperand).ToString();
+                    richTextBox1.Text = parts[0] + " " + parts[1] + " " + parts[2];
+            }
+            else if (richTextBox1.Text.Contains(" ") && richTextBox1.Text.Last() == ' ')
+            {
+                string[] parts = richTextBox1.Text.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                double rightOperand = double.Parse(parts[0], new CultureInfo("fr-FR"));
+                richTextBox1.Text = Math.Sqrt(rightOperand).ToString();
+                double result = operations[parts[1]](rightOperand, Math.Sqrt(rightOperand));
+            }
+            else if (input.StartsWith("sqrt(") && input.EndsWith(")"))
             {
                 // Input is already sqrt() form, extract inner number
                 string inside = input.Substring(5, input.Length - 6);
@@ -384,7 +359,29 @@ namespace Calculator
         {
             try
             {
-                richTextBox1.Text = Math.Pow(double.Parse(richTextBox1.Text),2).ToString();
+                if (richTextBox1.Text.Contains(" ") && richTextBox1.Text.Last() != ' ')
+                {
+                    string[] parts = richTextBox1.Text.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                    double rightOperand = double.Parse(parts[2], new CultureInfo("fr-FR"));
+                    parts[2] = Math.Pow(rightOperand, 2).ToString();
+                    richTextBox1.Text = parts[0] + " " + parts[1] + " " + parts[2];
+                }
+                else if (richTextBox1.Text.Contains(" ") && richTextBox1.Text.Last() == ' ')
+                {
+                    string[] parts = richTextBox1.Text.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                    double rightOperand = double.Parse(parts[0], new CultureInfo("fr-FR"));
+                    richTextBox1.Text = Math.Pow(rightOperand, 2).ToString();
+                    double result = operations[parts[1]](rightOperand, Math.Pow(rightOperand,2));
+                }
+                else if (richTextBox1.Text.Contains("sqr(") || richTextBox1.Text.Contains("sqr"))
+                {
+                    MessageBox.Show("Cannot square a square root operation directly. Please resolve the square root first.");
+                    return;
+                }
+                else
+                {
+                    richTextBox1.Text = Math.Pow(double.Parse(richTextBox1.Text), 2).ToString();
+                }
             }
             catch (FormatException)
             {
@@ -442,11 +439,19 @@ namespace Calculator
 
         private void DltBtn_Click(object sender, EventArgs e)
         {
-            if (richTextBox1.Text != string.Empty)
+            if (!string.IsNullOrEmpty(richTextBox1.Text))
             {
-                richTextBox1.Text = richTextBox1.Text.Substring(0, richTextBox1.Text.Length - 1);
+                if (richTextBox1.Text.Last() == ' ' && richTextBox1.Text.Length > 1)
+                {
+                    richTextBox1.Text = richTextBox1.Text.Substring(0, richTextBox1.Text.Length - 3); // Removes space + previous character
+                }
+                else
+                {
+                    richTextBox1.Text = richTextBox1.Text.Substring(0, richTextBox1.Text.Length - 1); // Removes last character
+                }
             }
-           
+
+
         }
         private void OneDivBtn_Click(object sender, EventArgs e)
         {
